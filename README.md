@@ -30,7 +30,7 @@ AI 코딩 에이전트가 활용할 수 있는 Skill, MCP 등의 toolkit을 정�
 | [git-worktree](.agents/skills/git-worktree/SKILL.md) | git-branch 규칙으로 새 브랜치를 만들고, `.agents/worktree/` 아래에 브랜치별 독립 작업 디렉터리 생성 | `create-worktree.sh` | git-branch 스킬 |
 | [git-commit](.agents/skills/git-commit/SKILL.md) | 스테이징한 변경 사항을 `type: 제목` 형식의 메시지로 커밋 | `commit.sh` | - |
 | [git-push](.agents/skills/git-push/SKILL.md) | 현재 브랜치를 같은 이름의 원격 브랜치로 push하고 push 후 상태 확인 | `push.sh` | - |
-| [git-pr-code-review](.agents/skills/git-pr-code-review/SKILL.md) | GitHub PR의 변경 사항을 정해진 관점과 심각도 기준으로 리뷰하고, 사용자가 승인하면 PR에 리뷰 코멘트 등록 | - | GitHub CLI(`gh`) |
+| [git-pr-code-review](.agents/skills/git-pr-code-review/SKILL.md) | GitHub PR의 변경 사항을 정해진 관점과 심각도 기준으로 리뷰하고, 사용자가 승인하면 PR에 리뷰 코멘트 등록 | `pr-context.sh`, `post-review.sh` | GitHub CLI(`gh`) |
 | [git-merge-to-target](.agents/skills/git-merge-to-target/SKILL.md) | source 브랜치를 target 브랜치에 merge하고 target 브랜치를 원격에 push | `merge-to-target.sh` | - |
 
 **문서 기반 개발**
@@ -169,6 +169,19 @@ bash .agents/skills/git-commit/scripts/commit.sh feat "카카오 소셜 로그�
 
 ```bash
 bash .agents/skills/git-push/scripts/push.sh
+```
+
+#### git-pr-code-review
+
+- `pr-context.sh`가 PR 설명, diff, 변경 파일 목록, 연결된 이슈와 설계 문서, 기존 리뷰와 코멘트, CI 결과를 작업 디렉터리에 모으고, 추가한 줄에서 충돌 표시, 민감 정보, 디버그 출력, TODO를 자동으로 검사합니다.
+- 로컬 저장소에 PR의 base 저장소를 가리키는 원격 저장소가 있으면 PR 커밋을 fetch해 두므로, 브랜치를 바꾸지 않고 `git show <head 커밋>:<파일 경로>`로 PR 코드를 읽을 수 있습니다.
+- 리뷰 결과는 기본적으로 대화로만 전달합니다. 사용자가 승인하면 `post-review.sh`가 요약 본문과 인라인 코멘트를 리뷰 하나로 묶어 PR에 등록하며, 새 커밋 push 여부, diff 밖의 코멘트 위치, 민감 정보, 중복 등록을 먼저 확인합니다.
+- 재리뷰할 때는 이전 리뷰의 기준 커밋을 `--since`로 넘겨서, 이전 리뷰 이후의 변경만 따로 확인할 수 있습니다.
+
+```bash
+bash .agents/skills/git-pr-code-review/scripts/pr-context.sh 42
+bash .agents/skills/git-pr-code-review/scripts/post-review.sh 42 \
+  --commit <HEAD_COMMIT> --body-file <요약 본문 파일> --comments-file <인라인 코멘트 파일> --dry-run
 ```
 
 #### git-merge-to-target
@@ -328,7 +341,7 @@ cp -R /path/to/ai-agent-toolkit/.agents/skills/* <프로젝트 경로>/.claude/s
 |---|---|---|
 | bash, awk (macOS 또는 Linux) | bash 3.2 이상 | 모든 스킬 |
 | Git | 2.23 이상 (merge 충돌 사전 검사는 2.38 이상) | Git 스킬, develop-by-docs, deliverable-review (docs-create는 선택) |
-| GitHub CLI(`gh`) | 2.20 이상, `gh auth login`으로 인증 필요 | git-issue |
+| GitHub CLI(`gh`) | 2.20 이상 (git-pr-code-review는 2.72 이상), `gh auth login`으로 인증 필요 | git-issue, git-pr-code-review |
 | 프로젝트 빌드 도구 (Gradle, Maven, npm, Go, Cargo 등) | 프로젝트에서 요구하는 버전 | develop-by-docs |
 
 - Windows에서 이 저장소를 clone하면 `.claude` 심볼릭 링크가 링크 경로만 담긴 일반 파일로 체크아웃될 수 있습니다. Git의 `core.symlinks=true` 설정과 심볼릭 링크를 만들 수 있는 권한이 필요합니다.
