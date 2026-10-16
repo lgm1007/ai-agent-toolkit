@@ -30,6 +30,7 @@ AI 코딩 에이전트가 활용할 수 있는 Skill, MCP 등의 toolkit을 정�
 | [git-worktree](.agents/skills/git-worktree/SKILL.md) | git-branch 규칙으로 새 브랜치를 만들고, `.agents/worktree/` 아래에 브랜치별 독립 작업 디렉터리 생성 | `create-worktree.sh` | git-branch 스킬 |
 | [git-commit](.agents/skills/git-commit/SKILL.md) | 스테이징한 변경 사항을 `type: 제목` 형식의 메시지로 커밋 | `commit.sh` | - |
 | [git-push](.agents/skills/git-push/SKILL.md) | 현재 브랜치를 같은 이름의 원격 브랜치로 push하고 push 후 상태 확인 | `push.sh` | - |
+| [git-pr-code-review](.agents/skills/git-pr-code-review/SKILL.md) | GitHub PR의 변경 사항을 정해진 관점과 심각도 기준으로 리뷰하고, 사용자가 승인하면 PR에 리뷰 코멘트 등록 | - | GitHub CLI(`gh`) |
 | [git-merge-to-target](.agents/skills/git-merge-to-target/SKILL.md) | source 브랜치를 target 브랜치에 merge하고 target 브랜치를 원격에 push | `merge-to-target.sh` | - |
 
 **문서 기반 개발**
@@ -61,7 +62,9 @@ flowchart TD
     codeReview -. 수정 필요 .-> develop
     codeReview --> commit["git-commit<br/>커밋"]
     commit --> push["git-push<br/>push"]
-    push --> merge["git-merge-to-target<br/>개발 브랜치 반영"]
+    push --> prReview["git-pr-code-review<br/>PR 코드 리뷰"]
+    prReview -. 수정 필요 .-> develop
+    prReview --> merge["git-merge-to-target<br/>개발 브랜치 반영"]
 ```
 
 | 단계 | 스킬 | 결과물 |
@@ -73,13 +76,15 @@ flowchart TD
 | 5. 구현 | develop-by-docs | 코드와 테스트, 빌드 결과 |
 | 6. 코드 리뷰 | deliverable-review | 리뷰 보고서 `docs/<YYMMDD>/<영문 문서명>-code-review.md` |
 | 7. 커밋과 push | git-commit, git-push | `Refs: #128` 푸터가 붙은 커밋과 원격 작업 브랜치 |
-| 8. 반영 | git-merge-to-target | 개발 브랜치의 merge 커밋 |
+| 8. PR 리뷰 | git-pr-code-review | PR 리뷰 결과 (사용자가 승인하면 PR에 리뷰 코멘트로 등록) |
+| 9. 반영 | git-merge-to-target | 개발 브랜치의 merge 커밋 |
 
 스킬끼리는 이슈 번호와 설계 문서로 연결됩니다.
 
 - git-issue로 만든 이슈 번호를 git-branch나 git-worktree에 `--issue`로 넘기면 `feat/128-...` 형식의 브랜치가 만들어집니다.
 - 이슈 번호가 들어간 브랜치에서 git-commit으로 커밋하면 `Refs: #128` 푸터가 자동으로 붙습니다.
 - docs-create에 `--issue`로 이슈 번호를 넘기면 설계 문서의 관련 이슈에 기록됩니다. develop-by-docs는 브랜치의 이슈 번호와 설계 문서의 관련 이슈가 다르면 경고하고, deliverable-review는 같은 이슈 번호의 설계 문서를 찾아 코드 리뷰에 함께 사용합니다.
+- git-push가 출력한 PR 생성 링크로 PR을 만들면, git-pr-code-review가 PR에 연결된 이슈나 브랜치의 이슈 번호로 이슈와 설계 문서를 찾아 PR 리뷰에 함께 사용합니다.
 - 리뷰 보고서는 리뷰한 날짜의 디렉터리에 만들어집니다. 설계 문서를 작성한 날 리뷰까지 마치면 다음과 같이 한 디렉터리에 모입니다.
 
 ```
@@ -287,6 +292,7 @@ bash .agents/skills/deliverable-review/scripts/check-report.sh docs/260915/kakao
 | "방금 작성한 설계 문서 리뷰해줘", "구현한 코드 리뷰해줘" | deliverable-review |
 | "변경 사항 커밋해줘" | git-commit |
 | "원격에 푸시해줘" | git-push |
+| "42번 PR 코드 리뷰해줘", "현재 브랜치 PR 리뷰하고 PR에 코멘트 남겨줘" | git-pr-code-review |
 | "develop에 머지하고 푸시해줘" | git-merge-to-target |
 
 ### 다른 프로젝트에서 사용하기
